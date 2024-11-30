@@ -71,6 +71,7 @@ fn update(model: Model, msg: Msg) {
         _ -> #(model, effect.none())
       }
     }
+
     AddTask(kanban_block) ->
       case kanban_block {
         "todo" -> {
