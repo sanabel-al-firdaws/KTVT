@@ -33,15 +33,7 @@ type Model {
 }
 
 fn init(_flags) -> #(Model, Effect(Msg)) {
-  #(
-    Model(
-      to_do: ["Do Homework", "Prepare Presentation"],
-      in_progress: ["Writing Code", "Doing Sport"],
-      done: ["Finished Group Project", "Completed Reading"],
-      new_task: "",
-    ),
-    effect.none(),
-  )
+  #(Model(to_do: [], in_progress: [], done: [], new_task: ""), effect.none())
 }
 
 // UPDATE ----------------------------------------------------------------------
@@ -207,7 +199,7 @@ fn task() {
     sketch.text_align("center"),
     sketch.font_size(size.rem(1.5)),
     sketch.background_color("#F7F7F7"),
-    // Sky Blue for task background
+    // Task background color
     sketch.border("0.1rem solid #ddd"),
     // Subtle border
     sketch.border_radius(size.rem(0.4)),
@@ -226,6 +218,16 @@ fn task() {
       sketch.box_shadow("0 6px 12px rgba(0,0,0,0.2)"),
       // Prominent shadow on hover
     ]),
+    sketch.overflow("hidden"),
+    // Prevents text overflow outside the task box
+    sketch.text_overflow("ellipsis"),
+    // Adds ellipsis for truncated text
+    sketch.white_space("normal"),
+    // Allows text to wrap to the next line
+    // sketch.max_height(size.rem(4.0)),
+    // Optional: Set max height to prevent excessively tall tasks
+    sketch.line_height("1.8rem"),
+    // Adjusts spacing between lines for readability
   ])
 }
 
@@ -261,6 +263,37 @@ fn add_task_button() {
   ])
 }
 
+fn delete_task_button() {
+  sketch.class([
+    sketch.display("inline-flex"),
+    sketch.align_items("center"),
+    sketch.justify_content("center"),
+    sketch.background_color("transparent"),
+    sketch.color("#FF5C5C"),
+    sketch.border("0.1rem solid #FF5C5C"),
+    sketch.border_radius(size.rem(0.5)),
+    sketch.padding_("0.3rem 0.6rem"),
+    sketch.margin_("0 0 0 0.5rem"),
+    sketch.cursor("pointer"),
+    sketch.font_size(size.rem(1.0)),
+    sketch.font_weight("bold"),
+    sketch.transition(
+      "background-color 0.3s ease, color 0.3s ease, transform 0.2s ease, box-shadow 0.2s ease",
+    ),
+    sketch.box_shadow("0 2px 4px rgba(0, 0, 0, 0.1)"),
+    sketch.hover([
+      sketch.background_color("#FF5C5C"),
+      sketch.color("#FFFFFF"),
+      sketch.box_shadow("0 4px 8px rgba(0, 0, 0, 0.2)"),
+      sketch.transform("scale(1.1)"),
+    ]),
+    sketch.focus([
+      sketch.outline("none"),
+      sketch.box_shadow("0 0 0 0.2rem rgba(255, 92, 92, 0.5)"),
+    ]),
+  ])
+}
+
 fn view(model: Model) {
   html.div(container(), [], [
     html.div(kanban_board_container(), [], [
@@ -281,7 +314,7 @@ fn view(model: Model) {
               html.div(task(), [], [
                 html.text(task_item),
                 html.button(
-                  sketch.class([]),
+                  delete_task_button(),
                   [event.on_click(DeleteTask("todo", task_item))],
                   [html.text("X")],
                 ),
@@ -307,7 +340,7 @@ fn view(model: Model) {
               html.div(task(), [], [
                 html.text(task_item),
                 html.button(
-                  sketch.class([]),
+                  delete_task_button(),
                   [event.on_click(DeleteTask("in_progress", task_item))],
                   [html.text("X")],
                 ),
@@ -331,7 +364,7 @@ fn view(model: Model) {
               html.div(task(), [], [
                 html.text(task_item),
                 html.button(
-                  sketch.class([]),
+                  delete_task_button(),
                   [event.on_click(DeleteTask("done", task_item))],
                   [html.text("X")],
                 ),
