@@ -57,13 +57,13 @@ fn update(model: Model, msg: Msg) {
         }
         "in_progress" -> {
           let tasks =
-            model.to_do
+            model.in_progress
             |> list.filter(fn(t) { t != task })
           #(Model(..model, in_progress: tasks), effect.none())
         }
         "done" -> {
           let tasks =
-            model.to_do
+            model.done
             |> list.filter(fn(t) { t != task })
           #(Model(..model, done: tasks), effect.none())
         }
