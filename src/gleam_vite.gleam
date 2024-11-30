@@ -1,6 +1,9 @@
+import gleam/list
 import lustre
 import lustre/attribute
 import lustre/effect.{type Effect}
+import lustre/event
+import sketch/lustre/element
 
 import sketch/size
 
@@ -20,24 +23,97 @@ pub fn main() {
 
 // MODEL -----------------------------------------------------------------------
 type Model {
-  Model(number: Int)
+  Model(
+    to_do: List(String),
+    in_progress: List(String),
+    done: List(String),
+    new_task: String,
+    // Holds the value of the new task being typed
+  )
 }
 
 fn init(_flags) -> #(Model, Effect(Msg)) {
-  #(Model(number: 0), effect.none())
+  #(
+    Model(
+      to_do: ["Do Homework", "Prepare Presentation"],
+      in_progress: ["Writing Code", "Doing Sport"],
+      done: ["Finished Group Project", "Completed Reading"],
+      new_task: "",
+    ),
+    effect.none(),
+  )
 }
 
 // UPDATE ----------------------------------------------------------------------
 
 pub opaque type Msg {
-  Incr
-  Decr
+  UpdateNewTask(String)
+  AddTask(String)
+  DeleteTask(String, String)
 }
 
 fn update(model: Model, msg: Msg) {
   case msg {
-    Incr -> #(Model(model.number + 1), effect.none())
-    Decr -> #(Model(model.number - 1), effect.none())
+    UpdateNewTask(value) -> #(Model(..model, new_task: value), effect.none())
+    DeleteTask(kanban_block, task) -> {
+      case kanban_block {
+        "todo" -> {
+          let tasks =
+            model.to_do
+            |> list.filter(fn(t) { t != task })
+          #(Model(..model, to_do: tasks), effect.none())
+        }
+        "in_progress" -> {
+          let tasks =
+            model.to_do
+            |> list.filter(fn(t) { t != task })
+          #(Model(..model, in_progress: tasks), effect.none())
+        }
+        "done" -> {
+          let tasks =
+            model.to_do
+            |> list.filter(fn(t) { t != task })
+          #(Model(..model, done: tasks), effect.none())
+        }
+
+        _ -> #(model, effect.none())
+      }
+    }
+    AddTask(kanban_block) ->
+      case kanban_block {
+        "todo" -> {
+          case model.new_task {
+            "" -> #(model, effect.none())
+            t -> #(
+              Model(..model, to_do: [t, ..model.to_do], new_task: ""),
+              effect.none(),
+            )
+          }
+        }
+        "in_progress" -> {
+          case model.new_task {
+            "" -> #(model, effect.none())
+            t -> #(
+              Model(
+                ..model,
+                in_progress: [t, ..model.in_progress],
+                new_task: "",
+              ),
+              effect.none(),
+            )
+          }
+        }
+        "done" -> {
+          case model.new_task {
+            "" -> #(model, effect.none())
+            t -> #(
+              Model(..model, done: [t, ..model.done], new_task: ""),
+              effect.none(),
+            )
+          }
+        }
+        _ -> #(model, effect.none())
+      }
   }
 }
 
@@ -153,6 +229,18 @@ fn task() {
   ])
 }
 
+fn add_task_input() {
+  sketch.class([
+    sketch.background_color("#F7F7F7"),
+    sketch.border("0.1rem solid #ccc"),
+    sketch.border_radius(size.rem(0.4)),
+    sketch.padding(size.rem(0.8)),
+    sketch.margin_("0.5rem 0"),
+    sketch.box_shadow("0 1px 3px rgba(0,0,0,0.1)"),
+    sketch.font_size(size.rem(1.5)),
+  ])
+}
+
 fn add_task_button() {
   sketch.class([
     sketch.background_color("#4B8F6A"),
@@ -173,47 +261,83 @@ fn add_task_button() {
   ])
 }
 
-fn add_task_input() {
-  sketch.class([
-    sketch.background_color("#F7F7F7"),
-    // White background for input
-    sketch.border("0.1rem solid #ccc"),
-    // Subtle border
-    sketch.border_radius(size.rem(0.4)),
-    sketch.padding(size.rem(0.8)),
-    sketch.margin_("0.5rem 0"),
-    // Spacing around the input
-    sketch.box_shadow("0 1px 3px rgba(0,0,0,0.1)"),
-    // Subtle shadow
-    sketch.font_size(size.rem(1.5)),
-    // Standardized font size
-  ])
-}
-
-fn view(_model: Model) {
+fn view(model: Model) {
   html.div(container(), [], [
     html.div(kanban_board_container(), [], [
       html.div(kanban_board(), [], [
         html.div(kanban_block(), [], [
           html.div(block_title(), [], [html.text("To Do")]),
-          html.input(add_task_input(), [attribute.type_("text")]),
-          html.button(add_task_button(), [], [html.text("Add Task")]),
-          html.div(task(), [], [html.text("Do Homework")]),
-          html.div(task(), [], [html.text("Prepare Presentation")]),
+          html.input(add_task_input(), [
+            attribute.type_("text"),
+            attribute.value(model.new_task),
+            event.on_input(UpdateNewTask),
+          ]),
+          html.button(add_task_button(), [event.on_click(AddTask("todo"))], [
+            html.text("Add Task"),
+          ]),
+          element.fragment(
+            model.to_do
+            |> list.map(fn(task_item) {
+              html.div(task(), [], [
+                html.text(task_item),
+                html.button(
+                  sketch.class([]),
+                  [event.on_click(DeleteTask("todo", task_item))],
+                  [html.text("X")],
+                ),
+              ])
+            }),
+          ),
         ]),
         html.div(kanban_block(), [], [
           html.div(block_title(), [], [html.text("In Progress")]),
-          html.input(add_task_input(), [attribute.type_("text")]),
-          html.button(add_task_button(), [], [html.text("Add Task")]),
-          html.div(task(), [], [html.text("Writing Code")]),
-          html.div(task(), [], [html.text("Doing Sport")]),
+          html.input(add_task_input(), [
+            attribute.type_("text"),
+            attribute.value(model.new_task),
+            event.on_input(UpdateNewTask),
+          ]),
+          html.button(
+            add_task_button(),
+            [event.on_click(AddTask("in_progress"))],
+            [html.text("Add Task")],
+          ),
+          element.fragment(
+            model.in_progress
+            |> list.map(fn(task_item) {
+              html.div(task(), [], [
+                html.text(task_item),
+                html.button(
+                  sketch.class([]),
+                  [event.on_click(DeleteTask("in_progress", task_item))],
+                  [html.text("X")],
+                ),
+              ])
+            }),
+          ),
         ]),
         html.div(kanban_block(), [], [
           html.div(block_title(), [], [html.text("Done")]),
-          html.input(add_task_input(), [attribute.type_("text")]),
-          html.button(add_task_button(), [], [html.text("Add Task")]),
-          html.div(task(), [], [html.text("Finished Group Project")]),
-          html.div(task(), [], [html.text("Completed Reading")]),
+          html.input(add_task_input(), [
+            attribute.type_("text"),
+            attribute.value(model.new_task),
+            event.on_input(UpdateNewTask),
+          ]),
+          html.button(add_task_button(), [event.on_click(AddTask("done"))], [
+            html.text("Add Task"),
+          ]),
+          element.fragment(
+            model.done
+            |> list.map(fn(task_item) {
+              html.div(task(), [], [
+                html.text(task_item),
+                html.button(
+                  sketch.class([]),
+                  [event.on_click(DeleteTask("done", task_item))],
+                  [html.text("X")],
+                ),
+              ])
+            }),
+          ),
         ]),
       ]),
     ]),
